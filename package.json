@@ -7,7 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "live-server public"
   },
-  "author": "",
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "singleQuote": true
+  },
+  "author": "Keone Martin",
   "license": "ISC",
   "devDependencies": {
     "live-server": "^1.2.1"
