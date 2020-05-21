@@ -2,6 +2,7 @@
 let gameScene = new Phaser.Scene('Game');
 
 gameScene.init = function () {
+  this.isGameOver = false;
   // player speed
   this.playerSpeed = 2.5;
 
@@ -24,6 +25,7 @@ gameScene.preload = function () {
 
 // create, called once after preload
 gameScene.create = function () {
+  this.cameras.main.fadeIn(300);
   //  create bg sprit
   let bg = this.add.sprite(0, 0, 'background');
   // bg.setOrigin(0, 0); changes the sprit origin to 0 0... probably confusing
@@ -72,6 +74,7 @@ gameScene.create = function () {
 
 //  update called up to 60fps
 gameScene.update = function () {
+  if (this.isGameOver) return;
   if (this.input.activePointer.isDown) {
     // player walks
     this.player.x += this.playerSpeed;
@@ -81,9 +84,11 @@ gameScene.update = function () {
   let treasureRect = this.goal.getBounds();
   if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, treasureRect)) {
     // restart the scene
+    this.isGameOver = true;
     return this.gameOver('winner');
   }
 
+  // can also just grab the enemies children and run a for loop over them.
   Phaser.Actions.Call(
     this.enemies.getChildren(),
     function (enemy) {
@@ -94,6 +99,7 @@ gameScene.update = function () {
       const shouldTurnUp = enemy.speed > 0 && enemy.y >= this.enemyMaxY;
       if (shouldTurnDown || shouldTurnUp) enemy.speed *= -1;
       if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, enemyRect)) {
+        this.isGameOver = true;
         return this.gameOver('Failure');
       }
     },
@@ -103,8 +109,22 @@ gameScene.update = function () {
 
 gameScene.gameOver = function (condition) {
   console.log(condition);
-  this.scene.manager.bootScene(this);
-  return;
+  this.cameras.main.shake(300);
+  this.cameras.main.once(
+    'camerashakecomplete',
+    function (_camera, _effect) {
+      this.cameras.main.fade(500);
+    },
+    this
+  );
+  this.cameras.main.once(
+    'camerafadeoutcomplete',
+    function (_camera, _effect) {
+      this.scene.manager.bootScene(this);
+      return;
+    },
+    this
+  );
 };
 
 // set the config of the game
