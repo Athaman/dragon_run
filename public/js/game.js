@@ -4,6 +4,13 @@ let gameScene = new Phaser.Scene('Game');
 gameScene.init = function () {
   // player speed
   this.playerSpeed = 2.5;
+
+  this.enemyMinSpeed = 1;
+  this.enemyMaxSpeed = 3;
+
+  // enemy boundaries
+  this.enemyMinY = 80;
+  this.enemyMaxY = 280;
 };
 
 //  load assets
@@ -32,11 +39,35 @@ gameScene.create = function () {
   // one argument will apply to both dimensions
   this.player.setScale(0.5);
 
-  // this.enemy = this.add.sprite(250, 180, 'enemy');
-  // this.enemy.setScale(2);
-  // this.enemy.setAngle(45);
-  // rotation works around the origin so you can set 0,0 origin and spin it like a disco
-  // enemy.setRotation(Math.PI / 4);
+  this.goal = this.add.sprite(gameW - 80, gameH / 2, 'goal');
+  this.goal.setScale(0.6);
+
+  this.enemies = this.add.group({
+    key: 'enemy',
+    repeat: 5,
+    setXY: {
+      x: 80,
+      y: 100,
+      stepX: 80,
+      stepY: 20,
+    },
+  });
+
+  Phaser.Actions.ScaleXY(this.enemies.getChildren(), -0.4, -0.4);
+
+  // flip x and set speed
+  Phaser.Actions.Call(
+    this.enemies.getChildren(),
+    function (enemy) {
+      enemy.flipX = true;
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const speed =
+        this.enemyMinSpeed +
+        Math.random() * (this.enemyMaxSpeed - this.enemyMinSpeed);
+      enemy.speed = dir * speed;
+    },
+    this
+  );
 };
 
 //  update called up to 60fps
@@ -45,6 +76,35 @@ gameScene.update = function () {
     // player walks
     this.player.x += this.playerSpeed;
   }
+  //  treasure overlap check
+  let playerRect = this.player.getBounds();
+  let treasureRect = this.goal.getBounds();
+  if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, treasureRect)) {
+    // restart the scene
+    return this.gameOver('winner');
+  }
+
+  Phaser.Actions.Call(
+    this.enemies.getChildren(),
+    function (enemy) {
+      // enemy movement
+      enemy.y += enemy.speed;
+      const enemyRect = enemy.getBounds();
+      const shouldTurnDown = enemy.speed < 0 && enemy.y <= this.enemyMinY;
+      const shouldTurnUp = enemy.speed > 0 && enemy.y >= this.enemyMaxY;
+      if (shouldTurnDown || shouldTurnUp) enemy.speed *= -1;
+      if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, enemyRect)) {
+        return this.gameOver('Failure');
+      }
+    },
+    this
+  );
+};
+
+gameScene.gameOver = function (condition) {
+  console.log(condition);
+  this.scene.manager.bootScene(this);
+  return;
 };
 
 // set the config of the game
